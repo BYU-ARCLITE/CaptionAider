@@ -1,0 +1,6 @@
+*.swp
+index.html
+index.js
+node_modules/
+compiler/node_modules/
+config.json
