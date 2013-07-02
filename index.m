@@ -9,10 +9,10 @@
     <link rel="stylesheet" media="screen" href="./css/font-awesome.min.css">
     <link rel="stylesheet" href="{{{subtitle-timeline-editor}}}/timeline.css"/>
     <link rel="stylesheet" href="./css/timeline.css"/>
-    <link rel="stylesheet" href="{{{Ayameljs}}}/js/player2/css/player2.css"/>
+    <link rel="stylesheet" href="{{{Ayameljs}}}/css/player.css"/>
     <link rel="stylesheet" href="{{{TimedText}}}/css/timed-text.css"/>
 
-    <script src="./js/jquery-1.10.1.min.js" type="text/javascript"></script>
+    <script src="./js/jquery-2.0.0.min.js" type="text/javascript"></script>
     <script src="./bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
 
     <script type="text/javascript" src="{{{EditorWidgets}}}/Save.js"></script>
@@ -53,29 +53,29 @@
     <script type="text/javascript" src="{{{TimedText}}}/js/plugins/SSAv4.js"></script>
 
 
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/Ayamel.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/AnimationHandler.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/AyamelPlayer.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/CaptionTrackLoader.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/ControlBar.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/FullScreenHandler.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/KeyBinder.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/LangCodes.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/MediaPlayer.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/Mobile.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/ProgressBar.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/CaptionsMenu.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/FullScreenButton.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/PlayButton.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/RateSlider.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/SliderBar.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/TimeCode.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/controls/VolumeSlider.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/plugins/brightcove.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/plugins/flashVideo.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/plugins/html5Video.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/plugins/html5Audio.js"></script>
-    <script type="text/javascript" src="{{{Ayameljs}}}/js/player2/js/plugins/youtube.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/Ayamel.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/AnimationHandler.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/AyamelPlayer.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/CaptionTrackLoader.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/ControlBar.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/FullScreenHandler.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/KeyBinder.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/LangCodes.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/MediaPlayer.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/Mobile.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/ProgressBar.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/CaptionsMenu.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/FullScreenButton.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/PlayButton.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/RateSlider.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/SliderBar.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/TimeCode.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/controls/VolumeSlider.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/plugins/brightcove.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/plugins/flashVideo.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/plugins/html5Video.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/plugins/html5Audio.js"></script>
+    <script type="text/javascript" src="{{{Ayameljs}}}/js/plugins/youtube.js"></script>
   </head>
   <body>
     <div class="container">
@@ -271,8 +271,8 @@
             <div class="controls">
               <div id="saveDestinations">
                 <label class="radio">
-                  <input type="radio" name="saveDestination" value="ayamel" checked>
-                  Ayamel
+                  <input type="radio" name="saveDestination" value="server" checked>
+                  Server
                 </label>
               </div>
             </div>
@@ -331,14 +331,12 @@
         <button class="btn btn-blue" id="loadTrackButton">Load</button>
       </div>
     </div>
-    <!-- auto-generate this <script type="text/javascript">
-      var content = {"id":672,"name":"Writer-Director 8","contentType":"video","thumbnail":"https://s3.amazonaws.com/ayamel/64ce906168f547a30cdd3ea878b063eb.jpg","resourceId":"a026f1e7-3e33-c43f-5017-92ec15276eff","dateAdded":"2013-06-20T15:49:02.483-06:00","visibility":4,"shareability":1,"settings":{"enabledAnnotationDocuments":"","enabledCaptionTracks":"e3db959b-6099-1c8e-9c4a-3427ad866ca6,1742fc48-6ab2-ae1b-4eb2-6d8d9d3d595f","includeTranscriptions":"true","user_61:enabledCaptionTracks":"e3db959b-6099-1c8e-9c4a-3427ad866ca6","level":"4"},"authKey":"d318a08d46e05a0377d5bbf4cbf9ebcc","views":7,"labels":["Arabic Encounters"]};
-      var courseId = 0;
-      var userId = 13;
-      var owner = true;
-      var teacher = false;
-      ResourceLibrary.setBaseUrl("http://sartre3.byu.edu:9005/api/v1/");
-    </script> -->
+    <script type="text/javascript">
+		//Fill in with real data
+		var media_resource = {};
+		var transcript_resources = [];
+		var saveURL = "./save";
+    </script>
     <script type="text/javascript" src="./js/captionAider.js"></script>
   </body>
 </html>

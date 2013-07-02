@@ -1,73 +1,52 @@
 $(function() {
+	"use strict";
 	var videoPlayer,
-renderer,captionEditor, cstack, timeline,
-timestamp = document.getElementById("timestamp"),
-automove = document.getElementById("moveAfterAddButton"),
-clearRepeatButton = document.getElementById("clearRepeatButton"),
-enableRepeatButton = document.getElementById("enableRepeatButton"),
-repeatIcon = document.getElementById("repeatIcon");
-cstack = new EditorWidgets.CommandStack();
-cstack.bindKeyEvents(document);
+		renderer,captionEditor, cstack, timeline,
+		timestamp = document.getElementById("timestamp"),
+		automove = document.getElementById("moveAfterAddButton"),
+		clearRepeatButton = document.getElementById("clearRepeatButton"),
+		enableRepeatButton = document.getElementById("enableRepeatButton"),
+		repeatIcon = document.getElementById("repeatIcon");
 
-timeline = new Timeline(document.getElementById("timeline"),{
-	stack:cstack,
-	 width: document.body.clientWidth || window.innerWidth,
-	 length:3600,
-	 start:0,
-	 end:240,
-	 multi:true,
-	 tool:Timeline.SELECT
-});
+	function frame_change() { timeline.currentTime = this.currentTime;}
+	function setlen(){ timeline.length = videoPlayer.duration; timestamp.textContent = timeline.timeCode; }	
+	
+	cstack = new EditorWidgets.CommandStack();
+	cstack.bindKeyEvents(document);
 
-Ayamel.prioritizedPlugins.video = ["html5","flash","youtube","brightcove"];
-
-try{
-	videoPlayer = new Ayamel.classes.AyamelPlayer({
-		$holder: $('#contentHolder'),
-		    resource: null,
-		    components:{
-			    left: ["play","volume"],
-		    right:["rate","fullscreen","timeCode"]
-		    }
+	timeline = new Timeline(document.getElementById("timeline"),{
+		stack:cstack,
+		width: document.body.clientWidth || window.innerWidth,
+		length:3600,
+		start:0,
+		end:240,
+		multi:true,
+		tool:Timeline.SELECT
 	});
-
-	renderer = videoPlayer.captionRenderer;
 
 	captionEditor = CaptionEditor({
 		stack: cstack,
-		      renderer: renderer,
-		      timeline: timeline
+		timeline: timeline
 	});
+	renderer = new TimedText.CaptionRenderer({
+		renderCue: captionEditor.make
+	});
+	captionEditor.renderer = renderer;
 
-	renderer.renderCue = captionEditor.make;
-
-	function frame_change() { timeline.currentTime = this.currentTime;}
-	function setlen(){ timeline.length = videoPlayer.duration; timestamp.textContent = timeline.timeCode; }
-	videoPlayer.addEventListener('loadedmetadata',setlen,false);
-	videoPlayer.addEventListener('durationchange',setlen,false);
-	videoPlayer.addEventListener("timeupdate",frame_change.bind(videoPlayer),false);
-	timeline.on('jump', function(time){ videoPlayer.currentTime = time; });
 	timeline.on('convert', function(){ renderer.rebuildCaptions(false); });
 	timeline.on('move', function(){ renderer.rebuildCaptions(false); });
 	timeline.on('resizer', function(){ renderer.rebuildCaptions(false); });
 	timeline.on('resizel', function(){ renderer.rebuildCaptions(false);});
-	timeline.on('addtrack',function(track){
-		if (timeline.trackIndices[track.textTrack.label] === undefined) {
-			videoPlayer.captionRenderer.addTextTrack(track.textTrack);
-			videoPlayer.controlBar.addTrack(track.textTrack);
-			updateSpacing();
-		}
-	});
-
-	//timeline.on("cuechange", function(event) {});
+	timeline.on('merge',function(seg) { renderer.rebuildCaptions(true); });
+	timeline.on('unmerge',function(seg) { renderer.rebuildCaptions(true); });
+	timeline.on('split',function(seg) { renderer.rebuildCaptions(true); });
+	timeline.on('timeupdate', function(){ timestamp.textContent = timeline.timeCode; });
 	timeline.on('delete',function(seg) {
-		"use strict";
 		if(timeline.spanInView(seg.startTime,seg.endTime)){
 			renderer.rebuildCaptions(true);
 		}
 	});
 	timeline.on('create',function(seg) {
-		"use strict";
 		if(automove.classList.contains('active')){
 			timeline.currentTool = Timeline.MOVE;
 			$("#moveToolButton").button("toggle");
@@ -77,48 +56,14 @@ try{
 		}
 	});
 	timeline.on('unpaste',function(segs) {
-		"use strict";
 		if(segs.some(function(seg){ return timeline.spanInView(seg.startTime,seg.endTime); })){
 			renderer.rebuildCaptions(true);
 		}
 	});
 	timeline.on('paste',function(segs) {
-		"use strict";
 		if(segs.some(function(seg){ return seg.active; })){
 			renderer.rebuildCaptions(false);
 		}
-	});
-	timeline.on('merge',function(seg) {
-		"use strict";
-		renderer.rebuildCaptions(true);
-	});
-	timeline.on('unmerge',function(seg) {
-		"use strict";
-		renderer.rebuildCaptions(true);
-	});
-	timeline.on('split',function(seg) {
-		"use strict";
-		renderer.rebuildCaptions(true);
-	});
-	timeline.on('timeupdate', function(){ timestamp.textContent = timeline.timeCode; });
-
-	// Listen for track creation from drop
-	timeline.on('dropTrack', function (track) {
-		videoPlayer.captionRenderer.addTextTrack(track);
-		videoPlayer.controlBar.addTrack(track);
-		updateSpacing();
-	});
-
-	// Track selection
-	videoPlayer.addEventListener("enabletrack", function(event) {
-		if (timeline.trackIndices[event.track.label] === undefined) {
-			timeline.addTextTrack(event.track, event.track.mime);
-			updateSpacing();
-		}
-	});
-	videoPlayer.addEventListener("disabletrack", function(event) {
-		timeline.removeTextTrack(event.track.label);
-		updateSpacing();
 	});
 	timeline.on('abRepeatEnabled',function(){
 		enableRepeatButton.title = "Disable Repeat";
@@ -134,233 +79,249 @@ try{
 	timeline.on('abRepeatUnset',function(){
 		[clearRepeatButton, enableRepeatButton].forEach(function(b){ b.classList.add('disabled'); });
 	});
-	timeline.addTextTrack(track, mime, true);
-}catch(e){
-	alert(e.message);
-}
+	
+	
+	Ayamel.prioritizedPlugins.video = ["html5","flash","youtube","brightcove"];
+	
+	try{
+		videoPlayer = new Ayamel.classes.AyamelPlayer({
+			$holder: $('#contentHolder'),
+			captionRenderer: renderer,
+			resource: media_resource,
+			captionTracks: transcript_resources,
+			components:{
+				left: ["play","volume","captions"],
+				right:["rate","fullscreen","timeCode"]
+			}
+		});	
 
-function updateSpacing() {
-	$("#bottomSpacer").css("margin-top", $("#bottomContainer").height() + "px");
-	$('html,body').animate({scrollTop: document.body.scrollHeight - window.innerHeight}, 1000,'swing');
+		videoPlayer.addEventListener('loadedmetadata',setlen,false);
+		videoPlayer.addEventListener('durationchange',setlen,false);
+		videoPlayer.addEventListener("timeupdate",frame_change.bind(videoPlayer),false);
+		timeline.on('jump', function(time){ videoPlayer.currentTime = time; });
+		
+		timeline.on('addtrack',function(track){
+			videoPlayer.addTextTrack(track.textTrack);
+			updateSpacing();
+		});
 
-}
+		// Track selection
+		videoPlayer.addEventListener("enabletrack", function(event) {
+			if (timeline.hasTextTrack(event.track.label)) { return; }
+			timeline.addTextTrack(event.track, event.track.mime);
+			updateSpacing();
+		});
+		videoPlayer.addEventListener("disabletrack", function(event) {
+			timeline.removeTextTrack(event.track.label);
+			updateSpacing();
+		});
+		
+		// Loading a track
+		$("#loadTrackButton").click(function() {
+			var kind = $("#loadType").val();
+			var language = $("#loadLanguage").val();
+			var where = $("#loadDestination").val();
+			EditorWidgets.LocalFile(where,/.*\.(vtt|srt|ass|ttml)/,function(fileObj){
+				TextTrack.parse({
+					content: fileObj.data,
+					mime: fileObj.mime,
+					kind: kind,
+					label: fileObj.name,
+					lang: language,
+					success: function(track, mime) {
+						track.mode = "showing";
+						timeline.addTextTrack(track, mime, true);
+						videoPlayer.addTextTrack(track);
+						updateSpacing();
+					}
+				});
+			});
+			$("#loadTrackModal").modal("hide");
+		});
 
+		// Track buttons
+		document.getElementById("createTrackButton").addEventListener("click", function() {
+			var $trackName = $("#trackName"),
+				type = $("#trackType").val(),
+				name = $trackName.val() || "Untitled",
+				language = $("#trackLanguage").val(),
+				track = new TextTrack(type, name, language),
+				mime = $("#trackFormat").val();
 
-updateSpacing();
+			track.mode = "showing";
+			track.readyState = TextTrack.LOADED;
+			$('#newTrackModal').modal('hide');
 
-// Check for unsaved tracks before leaving
-window.addEventListener('beforeunload',function(e){
-	// To be done
-}, false);
+			// Add the track to the player
+			videoPlayer.addTextTrack(track);
+			updateSpacing();
 
-window.addEventListener('resize',function(){
-	"use strict";
-	timeline.width = window.innerWidth;
-}, false);
-
-// Set up listeners
-
-
-automove.addEventListener("click", function() {
-	if(automove.classList.contains('active')){
-		automove.classList.remove("btn-yellow");
-		automove.classList.add("btn-inverse");
-	} else {
-		automove.classList.add("btn-yellow");
-		automove.classList.remove("btn-inverse");
+			// Clear the form
+			$trackName.val("");
+		});
+	}catch(e){
+		alert(e.message);
 	}
-}, false);
 
-
-//Bind the toolbar buttons
-
-// Undo/redo buttons
-document.getElementById("undoButton").addEventListener('click',function(){ timeline.cstack.undo(); },false);
-document.getElementById("redoButton").addEventListener('click',function(){ timeline.cstack.redo(); },false);
-
-// Font size buttons
-document.getElementById('plusFontButton').addEventListener('click',function(){ renderer.fontSizeRatio += 0.005; },false);
-document.getElementById('minusFontButton').addEventListener('click',function(){ renderer.fontSizeRatio -= 0.005; },false);
-
-// Tool buttons
-function setTool(tool){	timeline.currentTool = tool; }
-document.getElementById("selectToolButton").addEventListener('click',setTool.bind(null,Timeline.SELECT),false);
-document.getElementById("moveToolButton").addEventListener('click',setTool.bind(null,Timeline.MOVE),false);
-document.getElementById("timeShiftToolButton").addEventListener('click',setTool.bind(null,Timeline.SHIFT),false);
-document.getElementById("addCueToolButton").addEventListener('click',setTool.bind(null,Timeline.CREATE),false);
-document.getElementById("splitToolButton").addEventListener('click',setTool.bind(null,Timeline.SPLIT),false);
-document.getElementById("deleteToolButton").addEventListener('click',setTool.bind(null,Timeline.DELETE),false);
-document.getElementById("scrollToolButton").addEventListener('click',setTool.bind(null,Timeline.SCROLL),false);
-document.getElementById("reorderToolButton").addEventListener('click',setTool.bind(null,Timeline.ORDER),false);
-document.getElementById("repeatToolButton").addEventListener('click',setTool.bind(null,Timeline.REPEAT),false);
-
-// AB Repeat Controls
-clearRepeatButton.addEventListener('click',function(){ timeline.clearRepeat(); },false);
-enableRepeatButton.addEventListener('click',function(){ timeline.abRepeatOn = !timeline.abRepeatOn; },false);
-
-
-// Track buttons
-document.getElementById("createTrackButton").addEventListener("click", function() {
-	var $trackName = $("#trackName"),
-	type = $("#trackType").val(),
-	name = $trackName.val() || "Untitled",
-	language = $("#trackLanguage").val(),
-	track = new TextTrack(type, name, language),
-	mime = $("#trackFormat").val();
-	track.mode = "showing";
-	track.readyState = TextTrack.LOADED;
-	$('#newTrackModal').modal('hide');
-
-	// Add the track to the player
-	videoPlayer.captionRenderer.addTextTrack(track);
-	videoPlayer.controlBar.addTrack(track);
+	function updateSpacing() {
+		$("#bottomSpacer").css("margin-top", $("#bottomContainer").height() + "px");
+		$('html,body').animate({scrollTop: document.body.scrollHeight - window.innerHeight}, 1000,'swing');
+	}
+	
 	updateSpacing();
 
-	// Clear the form
-	$trackName.val("");
-});
+	// Check for unsaved tracks before leaving
+	window.addEventListener('beforeunload',function(e){
+		// To be done
+	}, false);
 
-$("#editTrackModal").on("show", function() {
+	window.addEventListener('resize',function(){ timeline.width = window.innerWidth; }, false);
 
-	// Update the track select control
-	var $editTrack = $("#editTrack").html('<option id="dummyTrackOption">Select a track</option>');
-	for (var name in timeline.trackIndices) {
-		$editTrack.append('<option value="' + timeline.trackIndices[name] + '">' + name + '</option>');
-	}
-
-	// Hide the other controls
-	$("#editControls").hide();
-});
-
-$("#editTrack").change(function () {
-	var track = timeline.tracks[$(this).val()];
-	$("#dummyTrackOption").remove();
-
-	// Update and show the other controls
-	$("#editControls").show();
-	$("#editTrackName").val(track.textTrack.label);
-	$("#editTrackType").val(track.textTrack.kind);
-	$("#editTrackLanguage").val(track.textTrack.language);
-});
-
-$("#editTrackButton").click(function() {
-	var track = timeline.tracks[$("#editTrack").val()];
-	track.textTrack.kind = $("#editTrackType").val();
-	track.textTrack.language = $("#editTrackLanguage").val();
-
-	// Update the label
-	var newName = $("#editTrackName").val();
-	if (newName !== track.textTrack.label) {
-		timeline.trackIndices[newName] = timeline.trackIndices[track.textTrack.label];
-		delete timeline.trackIndices[track.textTrack.label];
-		track.textTrack.label = newName;
-	}
-
-	$("#editTrackModal").modal("hide");
-	timeline.render();
-	return false;
-});
-
-// Add save destinations
-(function () {
-	var targets = EditorWidgets.Save.targets, key;
-	for(key in targets) if(targets.hasOwnProperty(key)){
-		$("#saveDestinations").append('<label class="radio">' +
-			'<input type="radio" name="saveDestination" value="' + key + '">' + targets[key].label.replace("To ", "") + '</label>');
-	}
-}());
-
-// Saving modal opening
-$("#saveTrackModal").on("show", function () {
-	// Populate the track select
-	var $tracksToSave = $("#tracksToSave").html("");
-	Object.keys(timeline.trackIndices).map(function(name){
-		$tracksToSave.append('<option value="' + name + '">' + name + '</option>');
-	});
-});
-
-// The saving mechanism
-$("#saveTrackButton").click(function() {
-	var tracks = $("#tracksToSave").val(),
-	destination = $("input[name=saveDestination]:checked").val(),
-	key, data, textTrack;
-if (tracks && tracks.length) {
-	var exportedTracks = timeline.exportTracks(tracks);
-	if (destination === "ayamel") {
-
-		// Saving to the server. Provide all the information and data and let it handle everything
-		for (key in exportedTracks) {
-			textTrack = timeline.getTrack(tracks[key]).textTrack;
-			data = new FormData();
-			data.append("mime", exportedTracks[key].mime);
-			data.append("name", exportedTracks[key].name);
-			data.append("label", textTrack.label);
-			data.append("data", exportedTracks[key].data);
-			data.append("language", textTrack.language);
-			data.append("kind", textTrack.kind);
-			data.append("resourceId", textTrack.resourceId || "");
-			data.append("contentId", content.id);
-			$.ajax({
-				url: "/captionaider/save",
-				data: data,
-				cache: false,
-				contentType: false,
-				processData: false,
-				type: "post",
-				success: function (data) {
-					alert("Saved Successfully");
-					commandStack.saved = true;
-					timeline.render();
-				}
-			});
+	automove.addEventListener("click", function() {
+		if(automove.classList.contains('active')){
+			automove.classList.remove("btn-yellow");
+			automove.classList.add("btn-inverse");
+		} else {
+			automove.classList.add("btn-yellow");
+			automove.classList.remove("btn-inverse");
 		}
-	} else {
+	}, false);
 
-		// Use one of the editor widget saving mechanisms
-		EditorWidgets.Save(
-				exportedTracks, destination,
-				function(){
-					commandStack.saved = true;
-					timeline.render();
-					alert("Saved Successfully");
-				},
-				function(){ alert("Error Saving; please try again."); }
-				);
-	}
-}
-$("#saveTrackModal").modal("hide");
-});
 
-// Add load sources
-(function () {
-	var sources = EditorWidgets.LocalFile.sources;
-	for(key in sources) if(sources.hasOwnProperty(key)){
-		$("#loadDestinations").append('<label class="radio">' +
-			'<input type="radio" name="loadDestination" value="' + key + '">' + sources[key].label + '</label>');
-	}
-}());
+	//Bind the toolbar buttons
 
-// Loading a track
-$("#loadTrackButton").click(function() {
-	var kind = $("#loadType").val();
-	var language = $("#loadLanguage").val();
-	var where = $("#loadDestination").val();
-	EditorWidgets.LocalFile(where,/.*\.(vtt|srt)/,function(fileObj){
-		TextTrack.parse({
-			content: fileObj.data,
-			mime: fileObj.mime,
-			kind: kind,
-			label: fileObj.name,
-			lang: language,
-			success: function(track, mime) {
-				track.mode = "showing";
-				timeline.addTextTrack(track, mime, true);
-				videoPlayer.captionRenderer.addTextTrack(track);
-				videoPlayer.controlBar.addTrack(track);
-				updateSpacing();
-			}
+	// Undo/redo buttons
+	document.getElementById("undoButton").addEventListener('click',function(){ cstack.undo(); },false);
+	document.getElementById("redoButton").addEventListener('click',function(){ cstack.redo(); },false);
+
+	// Tool buttons
+	function setTool(tool){	timeline.currentTool = tool; }
+	document.getElementById("selectToolButton").addEventListener('click',setTool.bind(null,Timeline.SELECT),false);
+	document.getElementById("moveToolButton").addEventListener('click',setTool.bind(null,Timeline.MOVE),false);
+	document.getElementById("timeShiftToolButton").addEventListener('click',setTool.bind(null,Timeline.SHIFT),false);
+	document.getElementById("addCueToolButton").addEventListener('click',setTool.bind(null,Timeline.CREATE),false);
+	document.getElementById("splitToolButton").addEventListener('click',setTool.bind(null,Timeline.SPLIT),false);
+	document.getElementById("deleteToolButton").addEventListener('click',setTool.bind(null,Timeline.DELETE),false);
+	document.getElementById("scrollToolButton").addEventListener('click',setTool.bind(null,Timeline.SCROLL),false);
+	document.getElementById("reorderToolButton").addEventListener('click',setTool.bind(null,Timeline.ORDER),false);
+	document.getElementById("repeatToolButton").addEventListener('click',setTool.bind(null,Timeline.REPEAT),false);
+
+	// AB Repeat Controls
+	clearRepeatButton.addEventListener('click',function(){ timeline.clearRepeat(); },false);
+	enableRepeatButton.addEventListener('click',function(){ timeline.abRepeatOn = !timeline.abRepeatOn; },false);
+
+	$("#editTrackModal").on("show", function() {
+
+		// Update the track select control
+		var $editTrack = $("#editTrack").html('<option id="dummyTrackOption">Select a track</option>');
+		
+		timeline.tracks.forEach(function(track){
+			$editTrack.append('<option value="' + track.id + '">' + track.id + '</option>');
+		});
+
+		// Hide the other controls
+		$("#editControls").hide();
+	});
+
+	$("#editTrack").change(function () {
+		var track = timeline.getTrack($(this).val());
+		$("#dummyTrackOption").remove();
+
+		// Update and show the other controls
+		$("#editControls").show();
+		$("#editTrackName").val(track.id);
+		$("#editTrackType").val(track.kind);
+		$("#editTrackLanguage").val(track.language);
+	});
+
+	$("#editTrackButton").click(function() {
+		timeline.alterTextTrack(
+			$("#editTrack").val(),
+			$("#editTrackType").val(),
+			$("#editTrackLanguage").val(),
+			$("#editTrackName").val(),
+			true);
+
+		$("#editTrackModal").modal("hide");
+		return false;
+	});
+
+	// Add save destinations
+	(function () {
+		var targets = EditorWidgets.Save.targets;
+		Object.keys(targets).forEach(function(key){
+			$("#saveDestinations").append('<label class="radio">' +
+			'<input type="radio" name="saveDestination" value="' + key + '">' + targets[key].label.replace("To ", "") + '</label>');
+		});
+	}());
+
+	// Saving modal opening
+	$("#saveTrackModal").on("show", function () {
+		// Populate the track select
+		var $tracksToSave = $("#tracksToSave").html("");
+		timeline.trackNames.map(function(name){
+			$tracksToSave.append('<option value="' + name + '">' + name + '</option>');
 		});
 	});
-	$("#loadTrackModal").modal("hide");
-});
+
+	// The saving mechanism
+	$("#saveTrackButton").click(function() {
+		var tracks = $("#tracksToSave").val(),
+			destination = $("input[name=saveDestination]:checked").val(),
+			exportedTracks;
+		
+		$("#saveTrackModal").modal("hide");
+		if (tracks && tracks.length) { return; }
+		
+		exportedTracks = timeline.exportTracks(tracks);
+		
+		if (destination === "server") {
+			// Saving to the server. Provide all the information and data and let it handle everything
+			Object.keys(exportedTracks).forEach(function(key) {
+				var textTrack = timeline.getTrack(tracks[key]).textTrack;
+				var data = new FormData();
+				var fObj = exportedTracks[key];
+				data.append("mime", fObj.mime);
+				data.append("name", fObj.name);
+				data.append("data", fObj.data);
+				data.append("label", textTrack.label);
+				data.append("language", textTrack.language);
+				data.append("kind", textTrack.kind);
+				$.ajax({
+					url: saveURL,
+					data: data,
+					cache: false,
+					contentType: false,
+					processData: false,
+					type: "post",
+					success: function (data) {
+						cstack.setFileSaved(textTrack.label);
+						timeline.render();
+					}
+				});
+			});
+		} else {
+
+			// Use one of the editor widget saving mechanisms
+			EditorWidgets.Save(
+				exportedTracks, destination,
+				function(){
+					[].forEach.call(tracks,function(name){
+						cstack.setFileSaved(name);
+					});
+					timeline.render();
+				},
+				function(){ alert("Error Saving; please try again."); }
+			);
+		}
+	});
+
+	// Add load sources
+	(function () {
+		var sources = EditorWidgets.LocalFile.sources;
+		Object.keys(sources).forEach(function(key){
+			$("#loadDestinations").append('<label class="radio">' +
+			'<input type="radio" name="loadDestination" value="' + key + '">' + sources[key].label + '</label>');
+		});
+	}());
 });
