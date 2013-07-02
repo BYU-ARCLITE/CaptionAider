@@ -1,7 +1,7 @@
 $(function() {
 	"use strict";
 	var videoPlayer,
-		renderer,captionEditor, cstack, timeline,
+		renderer,captionEditor, commandStack, timeline,
 		timestamp = document.getElementById("timestamp"),
 		automove = document.getElementById("moveAfterAddButton"),
 		clearRepeatButton = document.getElementById("clearRepeatButton"),
@@ -11,28 +11,62 @@ $(function() {
 	function frame_change() { timeline.currentTime = this.currentTime;}
 	function setlen(){ timeline.length = videoPlayer.duration; timestamp.textContent = timeline.timeCode; }	
 	
-	cstack = new EditorWidgets.CommandStack();
-	cstack.bindKeyEvents(document);
+	commandStack = new EditorWidgets.CommandStack();
+	commandStack.bindKeyEvents(document);
 
 	timeline = new Timeline(document.getElementById("timeline"),{
-		stack:cstack,
+		stack: commandStack,
 		width: document.body.clientWidth || window.innerWidth,
-		length:3600,
-		start:0,
-		end:240,
-		multi:true,
-		tool:Timeline.SELECT
+		length: 3600,
+		start: 0,
+		end: 240,
+		multi: true,
+		tool: Timeline.SELECT
 	});
 
 	captionEditor = CaptionEditor({
-		stack: cstack,
+		stack: commandStack,
 		timeline: timeline
 	});
 	renderer = new TimedText.CaptionRenderer({
-		renderCue: captionEditor.make
+		renderCue: captionEditor.make.bind(captionEditor)
 	});
 	captionEditor.renderer = renderer;
 
+	Ayamel.prioritizedPlugins.video = ["html5","flash","youtube","brightcove"];
+	Ayamel.prioritizedPlugins.audio = ["html5"];
+	
+	try{
+		videoPlayer = new Ayamel.classes.AyamelPlayer({
+			$holder: $('#contentHolder'),
+			captionRenderer: renderer,
+			resource: media_resource,
+			captionTracks: transcript_resources,
+			components:{
+				left: ["play","volume","captions"],
+				right:["rate","fullscreen","timeCode"]
+			}
+		});	
+
+		videoPlayer.addEventListener('loadedmetadata',setlen,false);
+		videoPlayer.addEventListener('durationchange',setlen,false);
+		videoPlayer.addEventListener("timeupdate",frame_change.bind(videoPlayer),false);
+		timeline.on('jump', function(time){ videoPlayer.currentTime = time; });
+
+		// Track selection
+		videoPlayer.addEventListener("enabletrack", function(event) {
+			if (timeline.hasTextTrack(event.track.label)) { return; }
+			timeline.addTextTrack(event.track, event.track.mime);
+			updateSpacing();
+		});
+		/*videoPlayer.addEventListener("disabletrack", function(event) {
+			timeline.removeTextTrack(event.track.label);
+			updateSpacing();
+		});*/
+	}catch(e){
+		alert(e.message);
+	}
+	
 	timeline.on('convert', function(){ renderer.rebuildCaptions(false); });
 	timeline.on('move', function(){ renderer.rebuildCaptions(false); });
 	timeline.on('resizer', function(){ renderer.rebuildCaptions(false); });
@@ -80,88 +114,55 @@ $(function() {
 		[clearRepeatButton, enableRepeatButton].forEach(function(b){ b.classList.add('disabled'); });
 	});
 	
-	
-	Ayamel.prioritizedPlugins.video = ["html5","flash","youtube","brightcove"];
-	
-	try{
-		videoPlayer = new Ayamel.classes.AyamelPlayer({
-			$holder: $('#contentHolder'),
-			captionRenderer: renderer,
-			resource: media_resource,
-			captionTracks: transcript_resources,
-			components:{
-				left: ["play","volume","captions"],
-				right:["rate","fullscreen","timeCode"]
-			}
-		});	
+	timeline.on('addtrack',function(track){
+		if(videoPlayer){ videoPlayer.addTextTrack(track.textTrack); }
+		updateSpacing();
+	});
 
-		videoPlayer.addEventListener('loadedmetadata',setlen,false);
-		videoPlayer.addEventListener('durationchange',setlen,false);
-		videoPlayer.addEventListener("timeupdate",frame_change.bind(videoPlayer),false);
-		timeline.on('jump', function(time){ videoPlayer.currentTime = time; });
-		
-		timeline.on('addtrack',function(track){
-			videoPlayer.addTextTrack(track.textTrack);
-			updateSpacing();
-		});
-
-		// Track selection
-		videoPlayer.addEventListener("enabletrack", function(event) {
-			if (timeline.hasTextTrack(event.track.label)) { return; }
-			timeline.addTextTrack(event.track, event.track.mime);
-			updateSpacing();
-		});
-		videoPlayer.addEventListener("disabletrack", function(event) {
-			timeline.removeTextTrack(event.track.label);
-			updateSpacing();
-		});
-		
-		// Loading a track
-		$("#loadTrackButton").click(function() {
-			var kind = $("#loadType").val();
-			var language = $("#loadLanguage").val();
-			var where = $("#loadDestination").val();
-			EditorWidgets.LocalFile(where,/.*\.(vtt|srt|ass|ttml)/,function(fileObj){
-				TextTrack.parse({
-					content: fileObj.data,
-					mime: fileObj.mime,
-					kind: kind,
-					label: fileObj.name,
-					lang: language,
-					success: function(track, mime) {
-						track.mode = "showing";
-						timeline.addTextTrack(track, mime, true);
-						videoPlayer.addTextTrack(track);
-						updateSpacing();
-					}
-				});
+	timeline.on('removetrack',function(track){
+		updateSpacing();
+	});
+	
+	// Loading a track
+	$("#loadTrackButton").click(function() {
+		var kind = $("#loadType").val();
+		var language = $("#loadLanguage").val();
+		var where = $("#loadDestination").val();
+		EditorWidgets.LocalFile(where,/.*\.(vtt|srt|ass|ttml)/,function(fileObj){
+			TextTrack.parse({
+				content: fileObj.data,
+				mime: fileObj.mime,
+				kind: kind,
+				label: fileObj.name,
+				lang: language,
+				success: function(track, mime) {
+					track.mode = "showing";
+					timeline.addTextTrack(track, mime, true);
+					updateSpacing();
+				}
 			});
-			$("#loadTrackModal").modal("hide");
 		});
+		$("#loadTrackModal").modal("hide");
+	});
 
-		// Track buttons
-		document.getElementById("createTrackButton").addEventListener("click", function() {
-			var $trackName = $("#trackName"),
-				type = $("#trackType").val(),
-				name = $trackName.val() || "Untitled",
-				language = $("#trackLanguage").val(),
-				track = new TextTrack(type, name, language),
-				mime = $("#trackFormat").val();
+	// Track buttons
+	document.getElementById("createTrackButton").addEventListener("click", function() {
+		var $trackName = $("#trackName"),
+			type = $("#trackType").val(),
+			name = $trackName.val() || "Untitled",
+			language = $("#trackLanguage").val(),
+			track = new TextTrack(type, name, language),
+			mime = $("#trackFormat").val();
 
-			track.mode = "showing";
-			track.readyState = TextTrack.LOADED;
-			$('#newTrackModal').modal('hide');
+		$('#newTrackModal').modal('hide');
+		track.mode = "showing";
+		track.readyState = TextTrack.LOADED;
+		timeline.addTextTrack(track, mime);
+		updateSpacing();
 
-			// Add the track to the player
-			videoPlayer.addTextTrack(track);
-			updateSpacing();
-
-			// Clear the form
-			$trackName.val("");
-		});
-	}catch(e){
-		alert(e.message);
-	}
+		// Clear the form
+		$trackName.val("");
+	});
 
 	function updateSpacing() {
 		$("#bottomSpacer").css("margin-top", $("#bottomContainer").height() + "px");
@@ -172,7 +173,7 @@ $(function() {
 
 	// Check for unsaved tracks before leaving
 	window.addEventListener('beforeunload',function(e){
-		// To be done
+		if(!commandStack.saved){ return "You Have Unsaved Changes."; }
 	}, false);
 
 	window.addEventListener('resize',function(){ timeline.width = window.innerWidth; }, false);
@@ -191,8 +192,8 @@ $(function() {
 	//Bind the toolbar buttons
 
 	// Undo/redo buttons
-	document.getElementById("undoButton").addEventListener('click',function(){ cstack.undo(); },false);
-	document.getElementById("redoButton").addEventListener('click',function(){ cstack.redo(); },false);
+	document.getElementById("undoButton").addEventListener('click',function(){ commandStack.undo(); },false);
+	document.getElementById("redoButton").addEventListener('click',function(){ commandStack.redo(); },false);
 
 	// Tool buttons
 	function setTool(tool){	timeline.currentTool = tool; }
@@ -271,7 +272,7 @@ $(function() {
 			exportedTracks;
 		
 		$("#saveTrackModal").modal("hide");
-		if (tracks && tracks.length) { return; }
+		if(!(tracks && tracks.length)) { return; }
 		
 		exportedTracks = timeline.exportTracks(tracks);
 		
@@ -295,7 +296,7 @@ $(function() {
 					processData: false,
 					type: "post",
 					success: function (data) {
-						cstack.setFileSaved(textTrack.label);
+						commandStack.setFileSaved(textTrack.label);
 						timeline.render();
 					}
 				});
@@ -307,7 +308,7 @@ $(function() {
 				exportedTracks, destination,
 				function(){
 					[].forEach.call(tracks,function(name){
-						cstack.setFileSaved(name);
+						commandStack.setFileSaved(name);
 					});
 					timeline.render();
 				},
